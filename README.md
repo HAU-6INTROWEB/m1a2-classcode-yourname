@@ -32,8 +32,12 @@ instructor gave you):
 
 ### 2. Build the About page
 
-Open [`index.html`](index.html). It contains only a comment describing what to
-build. Replace it with a complete page that has:
+> **Work in the [`src/`](src/) folder.** That is the only folder you edit. Put
+> all your pages (and any images/CSS) there. Everything else in this repo
+> (`test/`, `package.json`, `.github/`) is course plumbing — leave it alone.
+
+Open [`src/index.html`](src/index.html). It contains only a comment describing
+what to build. Replace it with a complete page that has:
 
 1. A valid **HTML5 skeleton** (doctype, `<html lang>`, a head with the page
    **title** and the **UTF-8** charset) plus an **HTML comment** describing the
@@ -50,13 +54,13 @@ build. Replace it with a complete page that has:
 7. A page **footer** with contact info that includes a **phone link** and an
    **email link**.
 
-The comment in `index.html` names every concept to research in the tutorial.
+The comment in `src/index.html` names every concept to research in the tutorial.
 Look the elements up and write the markup yourself — that is the point of the
 activity.
 
 ### 3. View it in a browser
 
-Double-click `index.html` (or right-click → *Open with* your browser) and check
+Double-click `src/index.html` (or right-click → *Open with* your browser) and check
 your page. The nav links can point to pages that don't exist yet — that's fine.
 
 ## Set up your repo
