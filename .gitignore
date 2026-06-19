@@ -3,3 +3,5 @@ node_modules/
 .env.*
 .claude/
 test-results.json
+page-preview.png
+shot.mjs

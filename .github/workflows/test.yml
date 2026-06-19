@@ -1,6 +1,8 @@
 name: Autograde
 
-# Runs the test suite on every push so graders see a pass/fail at a glance.
+# Runs the test suite on every push so graders see a pass/fail at a glance,
+# and renders a screenshot of index.html so you can see your page without
+# leaving GitHub (download the "page-preview" artifact on the run).
 on:
   push:
   workflow_dispatch:
@@ -23,6 +25,40 @@ jobs:
         id: tests
         run: npx vitest run --reporter=default --reporter=json --outputFile=test-results.json
 
+      # ---- Page preview (never affects the grade) -------------------------
+      - name: Install browser for preview
+        if: always()
+        continue-on-error: true
+        run: |
+          npm i -D playwright >/dev/null 2>&1
+          npx playwright install --with-deps chromium
+
+      - name: Render page preview
+        if: always()
+        continue-on-error: true
+        run: |
+          cat > shot.mjs <<'EOF'
+          import { chromium } from 'playwright'
+          import { pathToFileURL } from 'node:url'
+          const browser = await chromium.launch()
+          try {
+            const page = await browser.newPage({ viewport: { width: 1024, height: 800 } })
+            await page.goto(pathToFileURL('index.html').href, { waitUntil: 'load', timeout: 15000 }).catch(() => {})
+            await page.screenshot({ path: 'page-preview.png', fullPage: true })
+          } finally {
+            await browser.close()
+          }
+          EOF
+          node shot.mjs
+
+      - name: Upload page preview
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: page-preview
+          path: page-preview.png
+          if-no-files-found: ignore
+
       - name: Write grading summary
         if: always()
         run: |
@@ -44,4 +80,6 @@ jobs:
             const icon = t.status === 'passed' ? '✅' : '❌';
             console.log(`| ${icon} | ${t.fullName || t.title} |`);
           }
+          console.log('');
+          console.log('📸 **Page preview:** open the **page-preview** artifact on this run to see your rendered `index.html`.');
           EOF
