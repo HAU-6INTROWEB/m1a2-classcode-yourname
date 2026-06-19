@@ -1,11 +1,15 @@
 name: Autograde
 
-# Runs the test suite on every push so graders see a pass/fail at a glance,
-# and renders a screenshot of index.html so you can see your page without
-# leaving GitHub (download the "page-preview" artifact on the run).
+# Runs the test suite on every push so graders see a pass/fail at a glance, and
+# renders a screenshot of index.html. Each run saves a timestamped screenshot
+# under submission/ and links it from the run summary. Works on private repos;
+# no GitHub Pages needed.
 on:
   push:
   workflow_dispatch:
+
+permissions:
+  contents: write   # lets the preview step commit the screenshot back
 
 jobs:
   test:
@@ -37,27 +41,35 @@ jobs:
         if: always()
         continue-on-error: true
         run: |
+          TS=$(date -u +%Y-%m-%dT%H-%M-%SZ)
+          echo "TS=$TS" >> "$GITHUB_ENV"
+          mkdir -p submission
           cat > shot.mjs <<'EOF'
           import { chromium } from 'playwright'
           import { pathToFileURL } from 'node:url'
+          const out = process.argv[2] || 'page-preview.png'
           const browser = await chromium.launch()
           try {
             const page = await browser.newPage({ viewport: { width: 1024, height: 800 } })
             await page.goto(pathToFileURL('index.html').href, { waitUntil: 'load', timeout: 15000 }).catch(() => {})
-            await page.screenshot({ path: 'page-preview.png', fullPage: true })
+            await page.screenshot({ path: out, fullPage: true })
           } finally {
             await browser.close()
           }
           EOF
-          node shot.mjs
+          node shot.mjs "submission/$TS.png"
 
-      - name: Upload page preview
+      - name: Commit preview
         if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: page-preview
-          path: page-preview.png
-          if-no-files-found: ignore
+        continue-on-error: true
+        run: |
+          [ -n "$TS" ] && [ -f "submission/$TS.png" ] || exit 0
+          git config user.name "course-bot"
+          git config user.email "course-bot@users.noreply.github.com"
+          git add submission
+          git diff --cached --quiet && { echo "no preview change"; exit 0; }
+          git commit -m "📸 Page preview $TS [skip ci]"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
 
       - name: Write grading summary
         if: always()
@@ -80,6 +92,10 @@ jobs:
             const icon = t.status === 'passed' ? '✅' : '❌';
             console.log(`| ${icon} | ${t.fullName || t.title} |`);
           }
-          console.log('');
-          console.log('📸 **Page preview:** open the **page-preview** artifact on this run to see your rendered `index.html`.');
+          const ts = process.env.TS;
+          if (ts) {
+            const url = `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/blob/${process.env.GITHUB_REF_NAME}/submission/${ts}.png`;
+            console.log('');
+            console.log(`📸 **Page preview:** [view rendered \`index.html\` (${ts})](${url})`);
+          }
           EOF
